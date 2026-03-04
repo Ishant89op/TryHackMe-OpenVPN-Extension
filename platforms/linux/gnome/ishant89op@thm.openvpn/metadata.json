@@ -3,5 +3,5 @@
     "name": "THM OpenVPN",
     "description": "Connects to the THM network.",
     "shell-version": [ "44", "45", "46", "47", "49", "49.3" ],
-    "url": "https://gjs.guide/extensions"
+    "version": 1
 }

@@ -1,58 +1,104 @@
+import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import GLib from 'gi://GLib';
+import Clutter from 'gi://Clutter';
+
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-export default class ExampleExtension extends Extension {
-    enable() {
-        this._active = false;
+const PROFILE = 'thm';
+const SERVICE = `openvpn-client@${PROFILE}`;
 
-        this._indicator = new PanelMenu.Button(0.0, this.metadata.name, false);
+function runCommand(argv) {
+    try {
+        let proc = Gio.Subprocess.new(argv, Gio.SubprocessFlags.NONE);
+        proc.wait_async(null, null);
+    } catch (e) {
+        console.error(`[THM-VPN] Command failed: ${e.message}`);
+    }
+}
 
-        // Icon in the panel
-        this._icon = new St.Icon({
-            icon_name: 'network-wireless-disabled-symbolic', // OFF state icon
-            style_class: 'system-status-icon',
+function isVpnActive() {
+    try {
+        let proc = Gio.Subprocess.new(
+            ['systemctl', 'is-active', SERVICE],
+            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE
+        );
+        let [, stdout] = proc.communicate_utf8(null, null);
+        return stdout.trim() === 'active';
+    } catch (_) {
+        return false;
+    }
+}
+
+const ThmVpnIndicator = GObject.registerClass(
+class ThmVpnIndicator extends PanelMenu.Button {
+    _init(extensionPath) {
+        super._init(0.0, 'THM VPN', true);
+
+        this._label = new St.Label({
+            y_align: Clutter.ActorAlign.CENTER,
+            text: 'THM',
+            style: 'font-family: monospace; font-size: 14px; font-weight: bold; padding: 0 6px; color: #e05555;',
         });
-        this._indicator.add_child(this._icon);
+        
+        this.add_child(this._label);
 
-        // Single click toggles directly
-        this._indicator.connect('button-press-event', () => {
+        this.connect('button-press-event', () => {
             this._toggle();
+            return Clutter.EVENT_STOP;
         });
 
-        Main.panel.addToStatusArea(this.uuid, this._indicator);
+        this._updateState();
+
+        this._pollId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => {
+            this._updateState();
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    _updateState() {
+        this._active = isVpnActive();
+        if (this._active) {
+            this._label.text = 'THM';
+            this._label.style = 'font-family: monospace; font-size: 14px; font-weight: bold; padding: 0 6px; color: #57e389;';
+        } else {
+            this._label.text = 'THM';
+            this._label.style = 'font-family: monospace; font-size: 14px; font-weight: bold; padding: 0 6px; color: #e05555;';
+        }
     }
 
     _toggle() {
-        this._active = !this._active;
-
         if (this._active) {
-            this._icon.icon_name = 'network-wireless-symbolic'; // ON state icon
-            this._runTask('on');
+            runCommand(['sudo', 'systemctl', 'stop', SERVICE]);
         } else {
-            this._icon.icon_name = 'network-wireless-disabled-symbolic'; // OFF state icon
-            this._runTask('off');
+            runCommand(['sudo', 'systemctl', 'start', SERVICE]);
         }
+        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2, () => {
+            this._updateState();
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
-    _runTask(state) {
-        try {
-            // Replace this with whatever command you want to run
-            let proc = Gio.Subprocess.new(
-                ['bash', '-c', `echo "Task is now ${state}"`],
-                Gio.SubprocessFlags.NONE
-            );
-        } catch (e) {
-            console.error(`my-extension: error running task: ${e}`);
+    destroy() {
+        if (this._pollId) {
+            GLib.source_remove(this._pollId);
+            this._pollId = null;
         }
+        super.destroy();
+    }
+});
+
+export default class ThmVpnExtension extends Extension {
+    enable() {
+        this._indicator = new ThmVpnIndicator(this.path);
+        Main.panel.addToStatusArea('thm-vpn', this._indicator);
     }
 
     disable() {
         this._indicator?.destroy();
         this._indicator = null;
-        this._active = false;
     }
 }
