@@ -67,7 +67,7 @@ if [ "$platform_no" -eq 1 ]; then
     DEBIAN_FRONTEND=noninteractive apt install -y openvpn
     
     echo
-    echo "Copying extension files to $HOME/.local/share/gnome-shell/extensions/ishant89op@thm.openvpn"
+    echo "Copying extension files to /home/$SUDO_USER/.local/share/gnome-shell/extensions/ishant89op@thm.openvpn"
     echo
 
     if [ ! -d platforms/linux/gnome/ishant89op@thm.openvpn ]; then
@@ -75,8 +75,8 @@ if [ "$platform_no" -eq 1 ]; then
         exit 1
     fi
 
-    mkdir -p "$HOME/.local/share/gnome-shell/extensions"
-    cp -r platforms/linux/gnome/ishant89op@thm.openvpn  "$HOME/.local/share/gnome-shell/extensions/"
+    mkdir -p "/home/$SUDO_USER/.local/share/gnome-shell/extensions"
+    cp -r platforms/linux/gnome/*  "/home/$SUDO_USER/.local/share/gnome-shell/extensions/"
 
     echo "Enabling the extension."
     echo
@@ -101,7 +101,7 @@ if [ "$platform_no" -eq 1 ]; then
     echo "Adding the 'systemctl' commands to the sudoers list."
     echo
 
-    echo "$(logname) ALL=(ALL) NOPASSWD: /usr/bin/systemctl start openvpn-client@thm, /usr/bin/systemctl stop openvpn-client@thm" > /etc/sudoers.d/thm-vpn
+    echo "$SUDO_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl start openvpn-client@thm, /usr/bin/systemctl stop openvpn-client@thm" > /etc/sudoers.d/thm-vpn
     chmod 440 /etc/sudoers.d/thm-vpn
 
     echo "Setup Done."
