@@ -17,7 +17,7 @@ For now it is only available for GNOME. Maybe I will extend it to windows and ma
 1. Download the latest `.deb` from [Releases](https://github.com/Ishant89op/TryHackMe-OpenVPN-Extension/releases)
 2. Run:
 ```bash
-   sudo dpkg -i thm-openvpn-extension_1.0_all.deb
+   sudo dpkg -i thm_ovpn_ext_v1.0.0.deb
 ```
 3. Enter your `.ovpn` file path when prompted.
 
